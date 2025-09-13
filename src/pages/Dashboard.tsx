@@ -26,7 +26,8 @@ import {
   X,
   RefreshCw,
   ChevronDown,
-  Loader2
+  Loader2,
+  LogOut
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PlatformAuthDialog from "@/components/PlatformAuthDialog";
@@ -38,7 +39,7 @@ const API_BASE_URL = 'http://localhost:3001/api';
 type PlatformItem = {
   id: string;
   name: string;
-  icon: ComponentType<any>;
+  icon: ComponentType<{ className?: string; size?: string | number }>;
   color: string;
 };
 
@@ -49,12 +50,12 @@ type GeneratedContentItem = {
   image: string;
   content: { caption: string; hashtags: string[] };
   approved: boolean;
-  icon?: ComponentType<any>;
+  icon?: ComponentType<{ className?: string; size?: string | number }>;
 };
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [chatMessages, setChatMessages] = useState<Array<{id: string, type: 'user' | 'system', content: string, timestamp: Date}>>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['instagram', 'linkedin']);
@@ -65,6 +66,10 @@ const Dashboard = () => {
   });
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleLogout = () => {
+    signOut();
+  };
 
   const platforms: PlatformItem[] = [
     { id: 'instagram', name: 'Instagram', icon: Instagram, color: 'bg-pink-500' },
@@ -239,6 +244,16 @@ const Dashboard = () => {
                 <span className="font-medium">{item.label}</span>
               </button>
             ))}
+            {user && (
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="w-full justify-start text-red-600 hover:text-red-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Log Out
+              </Button>
+            )}
           </nav>
         </div>
 

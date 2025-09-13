@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ import {
   FileText,
   TrendingUp,
   Building,
+  LogOut
 } from "lucide-react";
 import { BrandPreferencesService } from "@/lib/brandPreferencesService";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,81 +34,126 @@ const BrandSetup = () => {
   const [engagementScale, setEngagementScale] = useState([3]);
   const [leadGenScale, setLeadGenScale] = useState([3]);
   const [brandRecognitionScale, setBrandRecognitionScale] = useState([3]);
-  const { user, setCurrentUser } = useAuth();
+  
+  // Additional form state
+  const [ageRange, setAgeRange] = useState('');
+  const [location, setLocation] = useState('');
+  const [productDescription, setProductDescription] = useState('');
+  const [budgetRange, setBudgetRange] = useState('');
+  const [companyCulture, setCompanyCulture] = useState('');
+  const [pastAds, setPastAds] = useState('');
+  const [hasSocialMedia, setHasSocialMedia] = useState<boolean | undefined>(undefined);
+  const [targetsB2B, setTargetsB2B] = useState<boolean | undefined>(undefined);
+  const [hasSeasonalMarketing, setHasSeasonalMarketing] = useState<boolean | undefined>(undefined);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('');
+  const [secondaryColor, setSecondaryColor] = useState('');
+  const [additionalColors, setAdditionalColors] = useState('');
+  const [brandInspiration, setBrandInspiration] = useState('');
+  const [additionalBrandInfo, setAdditionalBrandInfo] = useState('');
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const effectiveUserId = (() => {
-    const ctxId = user?.id;
-    if (ctxId) return ctxId;
-    try {
-      const stored = JSON.parse(localStorage.getItem('currentUser') || 'null');
-      if (stored?.id) return stored.id;
-      const users = JSON.parse(localStorage.getItem('users') || 'null');
-      if (Array.isArray(users) && users.length && users[0]?.id) return users[0].id;
-      return null;
-    } catch {
-      return null;
-    }
-  })();
 
-  // Ensure auth context is hydrated from localStorage on this page
-  useEffect(() => {
-    if (!user) {
-      try {
-        const stored = localStorage.getItem('currentUser');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && parsed.id) {
-            setCurrentUser(parsed);
-          }
-        }
-      } catch {
-        // no-op
-      }
-    }
-  }, [user, setCurrentUser]);
+  const handleLogout = () => {
+    signOut();
+  };
 
   const handleLoad = async () => {
-    const userId = effectiveUserId;
-    if (!userId) {
-      toast({ title: 'Not signed in', description: 'Please sign in to load preferences.' });
+    if (!user?.id) {
+      toast({ 
+        title: 'Authentication Error', 
+        description: 'User ID not found. Please try signing in again.',
+        variant: "destructive"
+      });
       return;
     }
-    const prefs = await BrandPreferencesService.getPreferencesByUserId(userId);
-    if (!prefs) {
-      toast({ title: 'No saved preferences', description: 'Nothing to load yet.' });
-      return;
+
+    try {
+      const prefs = await BrandPreferencesService.getPreferencesByUserId(user.id);
+      if (!prefs) {
+        toast({ title: 'No saved preferences', description: 'Nothing to load yet.' });
+        return;
+      }
+      
+      // Load all form fields
+      setAgeRange(prefs.age_range ?? '');
+      setLocation(prefs.location ?? '');
+      setProductDescription(prefs.product_description ?? '');
+      setMarketingStrategy(prefs.marketing_strategy ?? '');
+      setBudgetRange(prefs.budget_range ?? '');
+      setSelectedTones(prefs.tone_of_voice ?? []);
+      setCompanyCulture(prefs.company_culture ?? '');
+      setPastAds(prefs.past_ads ?? '');
+      setHasSocialMedia(prefs.has_social_media_presence);
+      setTargetsB2B(prefs.targets_b2b);
+      setHasSeasonalMarketing(prefs.has_seasonal_marketing);
+      setLogoUrl(prefs.logo_url ?? '');
+      setPrimaryColor(prefs.primary_color ?? '');
+      setSecondaryColor(prefs.secondary_color ?? '');
+      setAdditionalColors(prefs.additional_colors ?? '');
+      setBrandInspiration(prefs.brand_inspiration ?? '');
+      setAdditionalBrandInfo(prefs.additional_brand_info ?? '');
+      
+      if (prefs.sales_importance) setSalesScale([prefs.sales_importance]);
+      if (prefs.brand_awareness_importance) setAwarenessScale([prefs.brand_awareness_importance]);
+      if (prefs.customer_engagement_importance) setEngagementScale([prefs.customer_engagement_importance]);
+      if (prefs.lead_generation_importance) setLeadGenScale([prefs.lead_generation_importance]);
+      if (prefs.brand_recognition_importance) setBrandRecognitionScale([prefs.brand_recognition_importance]);
+      
+      toast({ title: 'Loaded', description: 'Preferences loaded successfully.' });
+    } catch (error) {
+      toast({ 
+        title: 'Load failed', 
+        description: 'Could not load preferences. Please try again.',
+        variant: "destructive"
+      });
     }
-    setMarketingStrategy(prefs.marketing_strategy ?? '');
-    setSelectedTones(prefs.tone_of_voice ?? []);
-    if (prefs.sales_importance) setSalesScale([prefs.sales_importance]);
-    if (prefs.brand_awareness_importance) setAwarenessScale([prefs.brand_awareness_importance]);
-    if (prefs.customer_engagement_importance) setEngagementScale([prefs.customer_engagement_importance]);
-    if (prefs.lead_generation_importance) setLeadGenScale([prefs.lead_generation_importance]);
-    if (prefs.brand_recognition_importance) setBrandRecognitionScale([prefs.brand_recognition_importance]);
-    toast({ title: 'Loaded', description: 'Preferences loaded successfully.' });
   };
 
   const handleSave = async () => {
-    const userId = effectiveUserId;
-    if (!userId) {
-      toast({ title: 'Not signed in', description: 'Please sign in to save preferences.' });
+    if (!user?.id) {
+      toast({ 
+        title: 'Authentication Error', 
+        description: 'User ID not found. Please try signing in again.',
+        variant: "destructive"
+      });
       return;
     }
+
     try {
       await BrandPreferencesService.savePreferences({
-        user_id: userId,
+        user_id: user.id,
+        age_range: ageRange || undefined,
+        location: location || undefined,
+        product_description: productDescription || undefined,
         marketing_strategy: marketingStrategy || undefined,
+        budget_range: budgetRange || undefined,
         tone_of_voice: selectedTones,
+        company_culture: companyCulture || undefined,
+        past_ads: pastAds || undefined,
         sales_importance: salesScale[0],
         brand_awareness_importance: awarenessScale[0],
         customer_engagement_importance: engagementScale[0],
         lead_generation_importance: leadGenScale[0],
         brand_recognition_importance: brandRecognitionScale[0],
+        has_social_media_presence: hasSocialMedia,
+        targets_b2b: targetsB2B,
+        has_seasonal_marketing: hasSeasonalMarketing,
+        logo_url: logoUrl || undefined,
+        primary_color: primaryColor || undefined,
+        secondary_color: secondaryColor || undefined,
+        additional_colors: additionalColors || undefined,
+        brand_inspiration: brandInspiration || undefined,
+        additional_brand_info: additionalBrandInfo || undefined,
       });
       toast({ title: 'Saved', description: 'Preferences saved successfully.' });
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
-      toast({ title: 'Save failed', description: message || 'Could not save preferences.' });
+      toast({ 
+        title: 'Save failed', 
+        description: message || 'Could not save preferences.',
+        variant: "destructive"
+      });
     }
   };
 
@@ -130,6 +176,7 @@ const BrandSetup = () => {
     { id: 'content', label: 'Content Library', icon: Settings, active: false },
     { id: 'analytics', label: 'Analytics', icon: Settings, active: false },
     { id: 'billing', label: 'Billing', icon: Settings, active: false },
+    { id: 'logout', label: 'Logout', icon: LogOut, active: false, onClick: handleLogout },
   ];
 
   return (
@@ -154,6 +201,7 @@ const BrandSetup = () => {
                   ? 'bg-blue-50 text-blue-600 border border-blue-200' 
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
+              onClick={item.onClick}
             >
               <item.icon className="h-5 w-5" />
               <span className="font-medium">{item.label}</span>
@@ -190,7 +238,7 @@ const BrandSetup = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="age-range">Age Range</Label>
-                    <Select>
+                    <Select value={ageRange} onValueChange={setAgeRange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select age range" />
                       </SelectTrigger>
@@ -206,7 +254,12 @@ const BrandSetup = () => {
                   </div>
                   <div>
                     <Label htmlFor="location">Location</Label>
-                    <Input id="location" placeholder="e.g., United States, Europe, Global" />
+                    <Input 
+                      id="location" 
+                      placeholder="e.g., United States, Europe, Global" 
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -227,6 +280,8 @@ const BrandSetup = () => {
                     id="product-description" 
                     placeholder="Describe your products or services in detail..."
                     rows={4}
+                    value={productDescription}
+                    onChange={(e) => setProductDescription(e.target.value)}
                   />
                 </div>
               </CardContent>
@@ -257,7 +312,7 @@ const BrandSetup = () => {
                   </div>
                   <div>
                     <Label htmlFor="budget">Main Budget (Optional)</Label>
-                    <Select>
+                    <Select value={budgetRange} onValueChange={setBudgetRange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select budget range" />
                       </SelectTrigger>
@@ -305,6 +360,8 @@ const BrandSetup = () => {
                     id="company-culture"
                     placeholder="Describe your company culture, values, and what makes your organization unique..."
                     rows={3}
+                    value={companyCulture}
+                    onChange={(e) => setCompanyCulture(e.target.value)}
                   />
                 </div>
                 <div>
@@ -313,6 +370,8 @@ const BrandSetup = () => {
                     id="past-ads"
                     placeholder="Describe or paste examples of your past successful advertisements..."
                     rows={3}
+                    value={pastAds}
+                    onChange={(e) => setPastAds(e.target.value)}
                   />
                 </div>
               </CardContent>
@@ -408,7 +467,11 @@ const BrandSetup = () => {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <span>Do you currently have an active social media presence?</span>
-                      <RadioGroup className="flex gap-4">
+                      <RadioGroup 
+                        value={hasSocialMedia === true ? "yes" : hasSocialMedia === false ? "no" : ""} 
+                        onValueChange={(value) => setHasSocialMedia(value === "yes" ? true : value === "no" ? false : undefined)}
+                        className="flex gap-4"
+                      >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="yes" id="social-yes" />
                           <Label htmlFor="social-yes" className="text-sm">Yes</Label>
@@ -421,7 +484,11 @@ const BrandSetup = () => {
                     </div>
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <span>Are you targeting B2B customers?</span>
-                      <RadioGroup className="flex gap-4">
+                      <RadioGroup 
+                        value={targetsB2B === true ? "yes" : targetsB2B === false ? "no" : ""} 
+                        onValueChange={(value) => setTargetsB2B(value === "yes" ? true : value === "no" ? false : undefined)}
+                        className="flex gap-4"
+                      >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="yes" id="b2b-yes" />
                           <Label htmlFor="b2b-yes" className="text-sm">Yes</Label>
@@ -434,7 +501,11 @@ const BrandSetup = () => {
                     </div>
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <span>Do you have seasonal marketing needs?</span>
-                      <RadioGroup className="flex gap-4">
+                      <RadioGroup 
+                        value={hasSeasonalMarketing === true ? "yes" : hasSeasonalMarketing === false ? "no" : ""} 
+                        onValueChange={(value) => setHasSeasonalMarketing(value === "yes" ? true : value === "no" ? false : undefined)}
+                        className="flex gap-4"
+                      >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="yes" id="seasonal-yes" />
                           <Label htmlFor="seasonal-yes" className="text-sm">Yes</Label>
@@ -460,23 +531,36 @@ const BrandSetup = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="logo-upload">Logo Upload</Label>
-                  <Input id="logo-upload" type="file" accept="image/*" />
-                  <p className="text-sm text-gray-500 mt-1">Upload your brand logo (PNG, JPG, SVG)</p>
+                  <Label htmlFor="logo-upload">Logo URL</Label>
+                  <Input 
+                    id="logo-upload" 
+                    placeholder="https://example.com/logo.png" 
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Enter your brand logo URL (PNG, JPG, SVG)</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Primary Color</Label>
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-blue-500 rounded border"></div>
-                      <Input placeholder="#3B82F6" />
+                      <div className="w-8 h-8 rounded border" style={{ backgroundColor: primaryColor || '#3B82F6' }}></div>
+                      <Input 
+                        placeholder="#3B82F6" 
+                        value={primaryColor}
+                        onChange={(e) => setPrimaryColor(e.target.value)}
+                      />
                     </div>
                   </div>
                   <div>
                     <Label>Secondary Color</Label>
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-purple-500 rounded border"></div>
-                      <Input placeholder="#8B5CF6" />
+                      <div className="w-8 h-8 rounded border" style={{ backgroundColor: secondaryColor || '#8B5CF6' }}></div>
+                      <Input 
+                        placeholder="#8B5CF6" 
+                        value={secondaryColor}
+                        onChange={(e) => setSecondaryColor(e.target.value)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -486,6 +570,8 @@ const BrandSetup = () => {
                     id="color-palette"
                     placeholder="List additional brand colors with hex codes..."
                     rows={2}
+                    value={additionalColors}
+                    onChange={(e) => setAdditionalColors(e.target.value)}
                   />
                 </div>
                 <div>
@@ -494,6 +580,8 @@ const BrandSetup = () => {
                     id="inspiration"
                     placeholder="Describe brands you admire or draw inspiration from..."
                     rows={3}
+                    value={brandInspiration}
+                    onChange={(e) => setBrandInspiration(e.target.value)}
                   />
                 </div>
                 <div>
@@ -502,6 +590,8 @@ const BrandSetup = () => {
                     id="brand-info"
                     placeholder="Any other important brand guidelines, fonts, imagery preferences, etc..."
                     rows={3}
+                    value={additionalBrandInfo}
+                    onChange={(e) => setAdditionalBrandInfo(e.target.value)}
                   />
                 </div>
               </CardContent>

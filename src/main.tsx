@@ -6,7 +6,7 @@ import { Auth0Provider } from '@auth0/auth0-react'
 const rootElement = document.getElementById("root")!;
 const domain = import.meta.env.VITE_AUTH0_DOMAIN as string | undefined;
 const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID as string | undefined;
-const redirectUri = (import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined) ?? `${window.location.origin}/callback`;
+const redirectUri = import.meta.env.VITE_AUTH0_REDIRECT_URI as string | undefined ?? `${window.location.origin}/callback`;
 
 if (!domain || !clientId) {
   console.error("Missing Auth0 env vars. Ensure VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID are set in the project root .env file.");
